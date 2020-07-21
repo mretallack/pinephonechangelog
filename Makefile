@@ -17,6 +17,6 @@ python/venv-${PYTHON_VERSION}/bin/activate:
 
 
 diff: python/venv-${PYTHON_VERSION}/bin/activate
-	. python/venv-${PYTHON_VERSION}/bin/activate ; python3 diff.py
+	@. python/venv-${PYTHON_VERSION}/bin/activate ; python3 diff.py
 
 

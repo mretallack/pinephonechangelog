@@ -39,9 +39,9 @@ for curImg in reversed(jsondata["images"]):
     else: 
         lastDelta=curImg
 
-        print("##################################################")
-        print("Delta for release: "+str(curImg["version"]))
-        print("")
+        #print("##################################################")
+        #print("Delta for release: "+str(curImg["version"]))
+        #print("")
 
         htmlData.write("<h1>"+"Delta for release: "+str(curImg["version"])+"</h1>")
 
@@ -66,7 +66,9 @@ for curImg in reversed(jsondata["images"]):
                 #print(member.name)
 
                 if member.name == "partitions/boot.img":
-                    print("UBoot/Kernel etc...")
+                    #print("UBoot/Kernel etc...")
+                    htmlData.write("<h2>UBoot/Kernel etc...</h2>")
+
                 elif member.name == "system/var/lib/dpkg/status":
 
                     tar.extract(member) 
@@ -92,13 +94,13 @@ for curImg in reversed(jsondata["images"]):
                         #print(changeList)
                         for change in changeList:
 
-                            print("Change from "+str(change.t1)+" to "+str(change.t2))
+                            #print("Change from "+str(change.t1)+" to "+str(change.t2))
 
                             curLevel=change
                             while True:
 
                                 if "name" in curLevel.t1:
-                                    print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
+                                    #print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
                                     
                                     htmlData.write("<h2>"+curLevel.t1["name"]+"</h2>")
                                     htmlData.write("<h3>"+"Change from "+str(change.t1)+" to "+str(change.t2)+"</h3>")
@@ -115,8 +117,8 @@ for curImg in reversed(jsondata["images"]):
 
         htmlData.write("<hr>")
 
-print("Last full: "+str(lastFull["version"]))
-print("Last delta: "+str(lastDelta["version"]))
+#print("Last full: "+str(lastFull["version"]))
+#print("Last delta: "+str(lastDelta["version"]))
 
 htmlData.write("""
 </body>
@@ -125,16 +127,6 @@ htmlData.write("""
 
 
 htmlData.close()
-
-#path=lastDelta["files"][0]["path"]
-
-
-
-#outFile=lzma.open('file.xz').read()
-
-#tar = tarfile.open('file.xz', "r:xz")
-#tar.extractall()
-#tar.close()
 
 
 
