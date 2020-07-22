@@ -12,6 +12,7 @@ from deepdiff import DeepDiff
 index="http://system-image.ubports.com/16.04/arm64/mainline/devel/pinephone/index.json"
 
 
+debug=True
 
 r =requests.get(index)
 
@@ -22,16 +23,9 @@ lastFull=None
 lastDelta=None
 lastPackageList=None
 
+changelog=[]
 
-htmlData = open('pinephonechangelog.html','w')
-
-
-htmlData.write("""
-<html>
-<head></head>
-<body>""")
-
-for curImg in reversed(jsondata["images"]):
+for curImg in jsondata["images"]:
     #print(curImg)
 
     if curImg["type"] == "full":
@@ -39,12 +33,10 @@ for curImg in reversed(jsondata["images"]):
     else: 
         lastDelta=curImg
 
-        #print("##################################################")
-        #print("Delta for release: "+str(curImg["version"]))
-        #print("")
-
-        htmlData.write("<h1>"+"Delta for release: "+str(curImg["version"])+"</h1>")
-
+        if debug:
+            print("##################################################")
+            print("Delta for release: "+str(curImg["version"]))
+            print("")
 
         path=curImg["files"][0]["path"]
 
@@ -54,6 +46,7 @@ for curImg in reversed(jsondata["images"]):
 
         r =requests.get(deltaURL, stream=True)
 
+        changes=[]
         
         if r.status_code == 200:
             with open("file.xz", 'wb') as f:
@@ -67,7 +60,14 @@ for curImg in reversed(jsondata["images"]):
 
                 if member.name == "partitions/boot.img":
                     #print("UBoot/Kernel etc...")
-                    htmlData.write("<h2>UBoot/Kernel etc...</h2>")
+                    #htmlData.write("<h2>UBoot/Kernel etc...</h2>")
+                    newEntry={
+                            "name": "UBoot/Kernel etc...", 
+                            "description": "",
+                            "change": ""
+                        }
+                    changes.append(newEntry)
+
 
                 elif member.name == "system/var/lib/dpkg/status":
 
@@ -94,18 +94,21 @@ for curImg in reversed(jsondata["images"]):
                         #print(changeList)
                         for change in changeList:
 
-                            #print("Change from "+str(change.t1)+" to "+str(change.t2))
+                            print("Change from "+str(change.t1)+" to "+str(change.t2))
 
                             curLevel=change
                             while True:
 
                                 if "name" in curLevel.t1:
-                                    #print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
-                                    
-                                    htmlData.write("<h2>"+curLevel.t1["name"]+"</h2>")
-                                    htmlData.write("<h3>"+"Change from "+str(change.t1)+" to "+str(change.t2)+"</h3>")
-                                    htmlData.write(curLevel.t1["details"]["synopsis"])
+                                    if debug:
+                                        print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
 
+                                    newEntry={
+                                            "name":curLevel.t1["name"], 
+                                            "description": curLevel.t1["details"]["synopsis"],
+                                            "change": str(change.t1)+" -> "+str(change.t2)
+                                        }
+                                    changes.append(newEntry)
                                     
                                     break
                                 curLevel=curLevel.up
@@ -115,10 +118,41 @@ for curImg in reversed(jsondata["images"]):
                #     print("Unknown member: "+member.name)
             tar.close()
 
-        htmlData.write("<hr>")
+        newEntry={
+                    "delta": str(curImg["version"]),
+                    "changes": changes
+                }
+        
+        changelog.append(newEntry)
 
-#print("Last full: "+str(lastFull["version"]))
-#print("Last delta: "+str(lastDelta["version"]))
+
+if debug:
+    print("Last full: "+str(lastFull["version"]))
+    print("Last delta: "+str(lastDelta["version"]))
+
+
+
+htmlData = open('pinephonechangelog.html','w')
+
+
+htmlData.write("""
+<html>
+<head></head>
+<body>""")
+
+for deltaEntry in reversed(changelog):
+
+    htmlData.write("<h1>"+"Delta for release: "+deltaEntry["delta"]+"</h1>")
+
+    for logEntry in deltaEntry["changes"]:
+
+        htmlData.write("<h2>"+logEntry["name"]+"</h2>")
+        htmlData.write("<h3>"+"Change from "+logEntry["change"]+"</h3>")
+        htmlData.write(logEntry["description"])
+
+    htmlData.write("<hr>")
+
+
 
 htmlData.write("""
 </body>
