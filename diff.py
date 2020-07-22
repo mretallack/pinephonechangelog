@@ -93,8 +93,8 @@ for curImg in jsondata["images"]:
                         
                         #print(changeList)
                         for change in changeList:
-
-                            print("Change from "+str(change.t1)+" to "+str(change.t2))
+                            if debug:
+                                print("Change from "+str(change.t1)+" to "+str(change.t2))
 
                             curLevel=change
                             while True:
