@@ -12,7 +12,7 @@ from deepdiff import DeepDiff
 index="http://system-image.ubports.com/16.04/arm64/mainline/devel/pinephone/index.json"
 
 
-debug=True
+debug=False
 
 r =requests.get(index)
 
