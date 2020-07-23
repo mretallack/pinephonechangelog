@@ -4,6 +4,7 @@ import shutil
 import json
 import lzma
 import tarfile
+import re
 from deb_parse.parser import Parser
 from jsondiff import diff
 from io import StringIO
@@ -38,85 +39,101 @@ for curImg in jsondata["images"]:
             print("Delta for release: "+str(curImg["version"]))
             print("")
 
-        path=curImg["files"][0]["path"]
-
-        deltaURL="http://system-image.ubports.com"+path
-
-        #print("URL: "+str(deltaURL))
-
-        r =requests.get(deltaURL, stream=True)
-
         changes=[]
-        
-        if r.status_code == 200:
-            with open("file.xz", 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)        
+            
+        for curUpdateFile in curImg["files"]:
 
-        
-            tar = tarfile.open('file.xz', "r:xz")
-            for member in tar.getmembers(): 
-                #print(member.name)
+            
+            path=curUpdateFile["path"]
 
-                if member.name == "partitions/boot.img":
-                    #print("UBoot/Kernel etc...")
-                    #htmlData.write("<h2>UBoot/Kernel etc...</h2>")
-                    newEntry={
-                            "name": "UBoot/Kernel etc...", 
-                            "description": "",
-                            "change": ""
-                        }
-                    changes.append(newEntry)
+            updateType="None"
+            z=re.match("^/pool/([a-z]+)-",path)
 
+            if z != None:
+                updateType=z.groups()[0]
 
-                elif member.name == "system/var/lib/dpkg/status":
+            
 
-                    tar.extract(member) 
+            if debug:
+                print("Update type: "+updateType)
 
-                    my_parser = Parser("system/var/lib/dpkg/status")
+            deltaURL="http://system-image.ubports.com"+path
 
-                    packageList=my_parser.clean_pkg_info
-    
-                    #print(packageList)
+            #print("URL: "+str(deltaURL))
 
-                    if lastPackageList != None:
-                        #diffator = json_diff.Comparator(StringIO(lastPackageList), StringIO(packageList))
-                        #diff = diffator.compare_dicts()
-                        ddiff = DeepDiff(lastPackageList, packageList, verbose_level=1, view='tree', ignore_order=True)                            
+            r =requests.get(deltaURL, stream=True)
 
-                        set_of_values_changed = ddiff['values_changed']
-                        #print(ddiff)
-                        #print(set_of_values_changed)
+            if r.status_code == 200:
+                with open("file.xz", 'wb') as f:
+                    r.raw.decode_content = True
+                    shutil.copyfileobj(r.raw, f)        
 
-                        #(changed,) = set_of_values_changed
-                        changeList=list(set_of_values_changed)
+            
+                tar = tarfile.open('file.xz', "r:xz")
+                for member in tar.getmembers(): 
+                    print(member.name)
+
+                    if member.name == "partitions/boot.img":
                         
-                        #print(changeList)
-                        for change in changeList:
-                            if debug:
-                                print("Change from "+str(change.t1)+" to "+str(change.t2))
+                        if debug:
+                            print("UBoot/Kernel etc...")
 
-                            curLevel=change
-                            while True:
+                        newEntry={
+                                "name": "UBoot/Kernel etc...", 
+                                "description": "",
+                                "change": ""
+                            }
+                        changes.append(newEntry)
 
-                                if "name" in curLevel.t1:
-                                    if debug:
-                                        print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
 
-                                    newEntry={
-                                            "name":curLevel.t1["name"], 
-                                            "description": curLevel.t1["details"]["synopsis"],
-                                            "change": str(change.t1)+" -> "+str(change.t2)
-                                        }
-                                    changes.append(newEntry)
-                                    
-                                    break
-                                curLevel=curLevel.up
-                    
-                    lastPackageList=packageList
-               # else:
-               #     print("Unknown member: "+member.name)
-            tar.close()
+                    elif member.name == "system/var/lib/dpkg/status":
+
+                        tar.extract(member) 
+
+                        my_parser = Parser("system/var/lib/dpkg/status")
+
+                        packageList=my_parser.clean_pkg_info
+        
+                        #print(packageList)
+
+                        if lastPackageList != None:
+                            #diffator = json_diff.Comparator(StringIO(lastPackageList), StringIO(packageList))
+                            #diff = diffator.compare_dicts()
+                            ddiff = DeepDiff(lastPackageList, packageList, verbose_level=1, view='tree', ignore_order=True)                            
+
+                            set_of_values_changed = ddiff['values_changed']
+                            #print(ddiff)
+                            #print(set_of_values_changed)
+
+                            #(changed,) = set_of_values_changed
+                            changeList=list(set_of_values_changed)
+                            
+                            #print(changeList)
+                            for change in changeList:
+                                if debug:
+                                    print("Change from "+str(change.t1)+" to "+str(change.t2))
+
+                                curLevel=change
+                                while True:
+
+                                    if "name" in curLevel.t1:
+                                        if debug:
+                                            print("Found Name: "+curLevel.t1["name"]+", description: "+curLevel.t1["details"]["synopsis"])
+
+                                        newEntry={
+                                                "name":curLevel.t1["name"], 
+                                                "description": curLevel.t1["details"]["synopsis"],
+                                                "change": str(change.t1)+" -> "+str(change.t2)
+                                            }
+                                        changes.append(newEntry)
+                                        
+                                        break
+                                    curLevel=curLevel.up
+                        
+                        lastPackageList=packageList
+                   # else:
+                   #     print("Unknown member: "+member.name)
+                tar.close()
 
         newEntry={
                     "delta": str(curImg["version"]),
