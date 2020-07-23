@@ -71,7 +71,7 @@ for curImg in jsondata["images"]:
             
                 tar = tarfile.open('file.xz', "r:xz")
                 for member in tar.getmembers(): 
-                    print(member.name)
+                    #print(member.name)
 
                     if member.name == "partitions/boot.img":
                         
