@@ -16,9 +16,15 @@ python/venv-${PYTHON_VERSION}/bin/activate:
 	${MAKE} -C python setupEnv
 
 
-diff: python/venv-${PYTHON_VERSION}/bin/activate
+diff: python/venv-${PYTHON_VERSION}/bin/activate e2tools/e2tools
 	@. python/venv-${PYTHON_VERSION}/bin/activate ; python3 diff.py
 
+
+e2tools/e2tools:
+	rm -fr e2tools
+	git clone https://github.com/e2tools/e2tools.git
+	cd e2tools && autoreconf -i && ./configure && make
+    
 
 shell:
 	bash --init-file python/venv-${PYTHON_VERSION}/bin/activate

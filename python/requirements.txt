@@ -3,3 +3,7 @@ requests
 json-diff
 jsondiff
 deepdiff
+launchpadlib
+PyYAML
+urllib3
+
