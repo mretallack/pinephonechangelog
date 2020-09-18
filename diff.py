@@ -9,7 +9,7 @@ import yaml
 import urllib.request
 import hashlib
 import os
-
+from collections import namedtuple
 
 from deb_parse.parser import Parser
 from jsondiff import diff
@@ -49,6 +49,9 @@ changelog=[]
 
 lastKernelCFG=None
 lastDTBCFG=None
+
+lastUbootVersion=None
+
 
 def calcHash(img, srcFile):
 
@@ -116,35 +119,74 @@ for curImg in jsondata["images"]:
 
                         #ext4 = Ext4(member.name)
                         bootChanges=""
-
+    
+                        kernelChanges=False
 
                         tar.extract(member, path="tmp") 
 
-                        newHash=calcHash("tmp/partitions/boot.img", "config-5.6.0-pine64")
+                        newHash=calcHash("tmp/partpulseaudioitions/boot.img", "config-5.6.0-pine64")
 
                         if lastKernelCFG != newHash:
                             bootChanges+=", Kernel Config Changed"
+                            kernelChanges=True
                         lastKernelCFG = newHash
 
                         newHash=calcHash("tmp/partitions/boot.img", "dtb")
 
                         if lastDTBCFG != newHash:
                             bootChanges+=", Device Tree Config Changed"
+                            kernelChanges=True
                         lastDTBCFG = newHash
 
-                        if debug:
-                            print("UBoot/Kernel etc..."+bootChanges)
+                        if kernelChanges:
+
+                            if debug:
+                                print("Kernel..."+bootChanges)
 
 
-                        newEntry={
-                                "name": "UBoot/Kernel etc...", 
-                                "description": "",
-                                "change": bootChanges
-                            }
+                            newEntry={
+                                    "name": "Kernel change", 
+                                    "description": "",
+                                    "change": bootChanges
+                                }
 
-                        changes.append(newEntry)
+                            changes.append(newEntry)
 
                         #getKernelDiff()
+
+                    # ok, check for uboot change
+                    elif member.name == "partitions/loader.img":
+                            
+                        tar.extract(member, path="tmp") 
+
+                        String = namedtuple("String", ["s", "offset"])
+
+                        def ascii_strings(buf, n=4):
+                            ascii_re = re.compile(b'(U-Boot SPL [a-zA-Z0-9\.\-]+)')
+                            for match in ascii_re.finditer(buf):
+                                yield String(match.group().decode("ascii"), match.start())
+
+                        with open("tmp/partitions/loader.img", 'rb') as f:
+                            b = f.read()
+
+                        for s in ascii_strings(b, n=4):
+                            thisUBoot='{:s}'.format(s.s)
+                            if debug:
+                                print("This uboot: "+thisUBoot)
+
+                        f.close()
+
+                        if thisUBoot != lastUbootVersion:
+                            
+                            newEntry={
+                                    "name": "Uboot Changed", 
+                                    "description": "",
+                                    "change": str(lastUbootVersion) + " to "+ str(thisUBoot)
+                                }
+
+                            changes.append(newEntry)
+
+                            lastUbootVersion= thisUBoot
 
 
                     elif member.name == "system/var/lib/dpkg/status":
