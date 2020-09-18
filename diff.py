@@ -124,7 +124,7 @@ for curImg in jsondata["images"]:
 
                         tar.extract(member, path="tmp") 
 
-                        newHash=calcHash("tmp/partpulseaudioitions/boot.img", "config-5.6.0-pine64")
+                        newHash=calcHash("tmp/partitions/boot.img", "config-5.6.0-pine64")
 
                         if lastKernelCFG != newHash:
                             bootChanges+=", Kernel Config Changed"
